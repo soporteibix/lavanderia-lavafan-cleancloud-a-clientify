@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 //token Clean Cloud
-const api_token = "1d1132d976e9b68ba0ae528596771783e91aa9c1 /no mandes/";
+const api_token = "1d1132d976e9b68ba0ae528596771783e91aa9c1";
 //const delayBetweenRequests = 1000;
 
 // Función para obtener la fecha actual en formato "YYYY-MM-DD"
@@ -19,7 +19,7 @@ const processedOrderIds = new Set();
 const fifteenDaysAgo = new Date();
 
 //El ultimo dato determina la cantidad de dias atras que va a buscar, en este caso 5
-fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 5);
+fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 2);
 
 
 const customersOptions = {
@@ -228,6 +228,9 @@ const processCustomerWithoutOrder = async (customer) => {
                 "postal_code": "",
                 "type": 1
             }
+        ],
+        "tags": [
+            "api_cleancloud", "Colombia",
         ]
     };
 
@@ -351,16 +354,17 @@ const runProcess = async () => {
 };
 
 
+
 console.log(`Número total de peticiones a Clean Cloud: ${cleanCloudRequestsCount}`);
 
-// Ejecutar el proceso inicial
-//runProcess();
 
 // Configurar un intervalo para actualizar los datos cada minuto (60,000 milisegundos)
-const updateInterval =  60 * 1000; // Cada 10 minutos
+const updateInterval = 300* 60 * 1000; // Cada 30 minutos
 
 setInterval(async () => {
+    console.log('Antes de fetchCleanCloudData');
     await fetchCleanCloudData();
-    // Ejecutar el proceso después de actualizar los datos
+    console.log('Después de fetchCleanCloudData, antes de runProcess');
     runProcess();
+    console.log('Después de runProcess');
 }, updateInterval);
