@@ -2,7 +2,7 @@ import axios from 'axios';
 
 //token Clean Cloud
 const api_token = "1d1132d976e9b68ba0ae528596771783e91aa9c1";
-const delayBetweenRequests = 100000;
+//const delayBetweenRequests = 1000;
 
 // Función para obtener la fecha actual en formato "YYYY-MM-DD"
 const getCurrentDate = () => {
@@ -21,19 +21,23 @@ const fifteenDaysAgo = new Date();
 //El ultimo dato determina la cantidad de dias atras que va a buscar, en este caso 5
 fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 5);
 
+
 const customersOptions = {
     method: 'post',
     url: 'https://cleancloudapp.com/api/getCustomer',
     headers: {
         'Content-Type': 'application/json'
+        
     },
+
     data: {
         "api_token": api_token,
         "dateFrom": fifteenDaysAgo.toISOString().split('T')[0],  // Formatea la fecha a "YYYY-MM-DD"
         "dateTo": getCurrentDate(),
         excludeDeactivated: 0
     }
-};
+};console.log('Script iniciado');
+
 
 const ordersOptions = {
     method: 'post',
@@ -48,6 +52,8 @@ const ordersOptions = {
         excludeDeactivated: 0
     }
 };
+let cachedCustomersData = null;
+let cachedOrdersData = null;
 
 
 // Función para procesar y mostrar la información de un pedido y cliente correspondiente
@@ -176,7 +182,7 @@ const processCustomerOrder = (customer, order) => {
                     console.log("Contacto NO enviado");
                     resolve();
                 });
-        }, delayBetweenRequests);
+        });
     });
 };
 
@@ -197,6 +203,7 @@ const continueWithOrders = async (customersData, ordersData) => {
 
     console.log('Proceso de comparación completado.');
 };
+
 
 // Nueva función para procesar clientes sin pedidos
 const processCustomerWithoutOrder = async (customer) => {
@@ -237,6 +244,7 @@ const processCustomerWithoutOrder = async (customer) => {
         },
         data: JSON.stringify(contactData)
     };
+    console.log('Script iniciado');
 
     // Agrega un retraso antes de realizar la siguiente consulta y envío
     return new Promise(resolve => {
@@ -244,27 +252,30 @@ const processCustomerWithoutOrder = async (customer) => {
             axios(config)
                 .then(response => {
                     console.log("Enviado a Clientify");
+                    console.log('Script iniciado');
+
                     resolve();
                 })
                 .catch(error => {
                     console.log("Contacto NO enviado");
                     resolve();
                 });
-        }, delayBetweenRequests);
+        });
     });
-
-    console.log('---------------------------------');
 };
 
+let cleanCloudRequestsCount = 0;
 
 axios(customersOptions)
     .then(response => {
+        cleanCloudRequestsCount++;
         //console.log('API Response (Customers):', response.data);
 
         if (response.data && response.data.Customers && Array.isArray(response.data.Customers)) {
             const customersData = response.data.Customers;
             axios(ordersOptions)
                 .then(response => {
+                    cleanCloudRequestsCount++;
                     //console.log('API Response (Orders):', response.data);
 
                     if (response.data && response.data.Orders && Array.isArray(response.data.Orders)) {
@@ -285,34 +296,69 @@ axios(customersOptions)
         console.error('Error (Customers):', error);
     });
 
-const runProcess = async () => {
-    try {
-        const customersResponse = await axios(customersOptions);
-        const ordersResponse = await axios(ordersOptions);
 
-        if (customersResponse.data && customersResponse.data.Customers && Array.isArray(customersResponse.data.Customers) &&
-            ordersResponse.data && ordersResponse.data.Orders && Array.isArray(ordersResponse.data.Orders)) {
 
-            const customersData = customersResponse.data.Customers;
-            const ordersData = ordersResponse.data.Orders;
-
-            await continueWithOrders(customersData, ordersData);
-            console.log('Proceso de comparación completado.');
-
-        } else {
-            console.error('Error: La respuesta de la API no contiene propiedades Customers y Orders iterables.');
-        }
-    } catch (error) {
-        console.error('Error:', error);
+// Opciones del cliente para la solicitud inicial
+const initialRequestOptions = {
+    method: 'post',
+    headers: {
+        'Content-Type': 'application/json'
     }
 };
+
+const fetchCleanCloudData = async () => {
+    try {
+        // Realizar la primera solicitud solo si los datos en caché aún no existen
+        if (!cachedCustomersData || !cachedOrdersData) {
+            const customersResponse = await axios({
+                ...initialRequestOptions,
+                ...customersOptions
+            });
+            const customersData = customersResponse.data?.Customers || [];
+
+            const ordersResponse = await axios({
+                ...initialRequestOptions,
+                ...ordersOptions
+            });
+            const ordersData = ordersResponse.data?.Orders || [];
+
+            cachedCustomersData = customersData;
+            cachedOrdersData = ordersData;
+
+            console.log('Datos de Clean Cloud actualizados.');
+        }
+    } catch (error) {
+        console.error('Error al obtener datos de Clean Cloud:', error.message);
+    }
+};
+
+
+
+
+const runProcess = async () => {
+    try {
+        // Verificar si ya se han obtenido los datos de Clean Cloud
+        if (!cachedCustomersData || !cachedOrdersData) {
+            await fetchCleanCloudData();
+        }
+
+        // Procesar la información utilizando los datos en caché
+        await continueWithOrders(cachedCustomersData, cachedOrdersData);
+        console.log('Proceso de comparación completado.');
+    } catch (error) {
+        console.error('Error en el proceso:', error.message);
+    }
+};
+
+
+console.log(`Número total de peticiones a Clean Cloud: ${cleanCloudRequestsCount}`);
 
 // Ejecutar el proceso inicial
 runProcess();
 
-// Configurar un intervalo para ejecutar el proceso cada minuto (60,000 milisegundos)
-const interval = 60 * 10000; // Cada 10 minutos
+// Configurar un intervalo para actualizar los datos cada minuto (60,000 milisegundos)
+const updateInterval = 10 * 60 * 1000; // Cada 10 minutos
 
 setInterval(async () => {
-    runProcess();
-}, interval);
+    await fetchCleanCloudData();
+}, updateInterval);
