@@ -354,11 +354,13 @@ const runProcess = async () => {
 console.log(`Número total de peticiones a Clean Cloud: ${cleanCloudRequestsCount}`);
 
 // Ejecutar el proceso inicial
-runProcess();
+//runProcess();
 
 // Configurar un intervalo para actualizar los datos cada minuto (60,000 milisegundos)
-const updateInterval = 2 * 60 * 1000; // Cada 10 minutos
+const updateInterval =  60 * 1000; // Cada 10 minutos
 
 setInterval(async () => {
     await fetchCleanCloudData();
+    // Ejecutar el proceso después de actualizar los datos
+    runProcess();
 }, updateInterval);
