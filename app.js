@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 //token Clean Cloud
-const api_token = "1d1132d976e9b68ba0ae528596771783e91aa9c1";
+const api_token = "1d1132d976e9b68ba0ae528596771783e91aa9c1 /no mandes/";
 //const delayBetweenRequests = 1000;
 
 // Función para obtener la fecha actual en formato "YYYY-MM-DD"
