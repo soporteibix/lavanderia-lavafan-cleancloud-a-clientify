@@ -362,7 +362,7 @@ const keepInstanceActive = () => {
 };
 
 // Configurar un intervalo para mantener activa la instancia cada 40 segundos
-const keepInstanceActiveInterval = 40 * 1000;
+const keepInstanceActiveInterval = 20 * 1000;
 
 setInterval(() => {
     keepInstanceActive();
