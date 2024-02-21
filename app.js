@@ -356,7 +356,17 @@ const runProcess = async () => {
 
 
 console.log(`Número total de peticiones a Clean Cloud: ${cleanCloudRequestsCount}`);
+// Función para mantener activa la instancia
+const keepInstanceActive = () => {
+    console.log('Manteniendo la instancia activa.');
+};
 
+// Configurar un intervalo para mantener activa la instancia cada 40 segundos
+const keepInstanceActiveInterval = 40 * 1000;
+
+setInterval(() => {
+    keepInstanceActive();
+}, keepInstanceActiveInterval);
 
 // Configurar un intervalo para actualizar los datos cada minuto (60,000 milisegundos)
 const updateInterval = 300* 60 * 1000; // Cada 30 minutos
