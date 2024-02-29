@@ -1,6 +1,6 @@
 import axios from 'axios';
-
-const token = "529f345a1219496efc6bc6664b76cf6aeebaea3c";
+//Token clientify
+const token = "9ea36e0237e45db8581e45546b9a5474a701556f";
 
 if (!token) {
   console.error('Token de autorización no proporcionado. Asegúrate de configurar la variable de entorno CLIENTIFY_TOKEN.');
