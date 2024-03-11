@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-//token Clean Cloud
-const api_token = "1d1132d976e9b68ba0ae528596771783e91aa9c1";
-//const delayBetweenRequests = 1000;
+//token Clean Cloud (se remplaza en cada cuenta nueva)
+const api_token = "1d1132d976e9b68ba0ae528596771783e91aa9c1"; //solo reemplazar lo que esta entre colimmas, no toquen las comillas, abajo dejo un ejemplo
+//const authToken = 'TOKEN-AQUI';
 
 // Función para obtener la fecha actual en formato "YYYY-MM-DD"
 const getCurrentDate = () => {
@@ -49,7 +49,9 @@ const ordersOptions = {
         "api_token": api_token,
         "dateFrom": fifteenDaysAgo.toISOString().split('T')[0],
         "dateTo": getCurrentDate(),
-        excludeDeactivated: 0
+        excludeDeactivated: 0,
+        sendProductDetails: 1
+
     }
 };
 let cachedCustomersData = null;
@@ -57,12 +59,7 @@ let cachedOrdersData = null;
 
 
 // Función para procesar y mostrar la información de un pedido y cliente correspondiente
-const processCustomerOrder = (customer, order) => {
-    //Verificar si el ID del pedido ya ha sido procesado
-    if (processedOrderIds.has(order.id)) {
-        console.log(`Pedido con ID ${order.id} ya procesado. Ignorando.`);
-        return;
-    }
+const processCustomerOrder = (customer, order, product) => {
 
     //Declaracion de variables:
     console.log('Informacion cliente:');
@@ -84,6 +81,8 @@ const processCustomerOrder = (customer, order) => {
     console.log('Fecha de recogida del pedido:', order.pickupDate);
     console.log('Monto total del pedido:', order.total);
     console.log(' Franja horaria de entrega del pedido:', order.deliveryTime);
+    
+    
 
     if (order.paid == 1) {
         order.paid = "Pagado"
@@ -111,10 +110,21 @@ const processCustomerOrder = (customer, order) => {
 
     }
 
+    if (Array.isArray(order.products)) {
+        order.products.forEach((product, productIndex) => {
+            console.log('  Nombre Servicio: ', product.name || 'No disponible');
+            console.log('    Cantidad: ', product.quantity || 'No disponible');
+            console.log('    Precio: ', product.pricePerUnit || 'No disponible');
+        });
+    } else {
+        console.log('  No hay servicio afiliado');
+    }
+    
     console.log('---------------------------------');
 
     // Agregar el ID del pedido al conjunto
-    processedOrderIds.add(order.id);
+   // processedOrderIds.add(order.id);
+
     //Declaracion de variables a Clientify
 
     const contactData = {
@@ -135,15 +145,28 @@ const processCustomerOrder = (customer, order) => {
         ],
 
         "message":
-            'ID del pedido: ' + order.id + "\n"
-            + 'Servicio: ' + order.notes + "\n"
-            + 'Cantidad de piezas: ' + order.pieces + "\n"
-            + 'Status: ' + order.status + "\n"
-            + 'Status del pago: ' + order.paid + "\n"
-            + 'Hora de recogida: ' + order.deliveryTime + "\n"
-            + 'Total del pedido: ' + order.total + "\n"
-            + 'Dirección del pedido: ' + order.address + "\n"
-            + 'Comentarios: ' + customer.privateNotes
+        'ID del pedido: ' + order.id + "\n"
+
+        + (Array.isArray(order.products) ?
+        order.products.map(product => {
+            return `  Nombre Servicio: ${product.name || 'No disponible'} \n`
+                + `    Cantidad: ${product.quantity || 'No disponible'} \n`
+                    
+        }).join('\n') :
+        'No hay productos en esta orden'
+    )
+        + 'Nota Servicio: ' + order.notes + "\n" 
+        //'Cantidad de piezas: ' + order.pieces + "\n"
+        + 'Estado del pedido: ' + order.status + "\n"
+        + 'Estado del pago: ' + order.paid + "\n"
+        + 'Hora de recogida: ' + order.deliveryTime + "\n"
+        + 'Total del pedido: ' + order.total + "\n"
+        + 'Dirección del pedido: ' + order.address + "\n"
+        + 'Comentarios: ' + customer.privateNotes + "\n"
+        
+        
+    
+
         ,
 
         "description": 'ID Cliente: ' + customer.ID + "\n" + 'ID pedido: ' + order.id +
@@ -157,7 +180,13 @@ const processCustomerOrder = (customer, order) => {
     };
 
     const apiUrl = 'https://api.clientify.net/v1/contacts/';
-    const authToken = '9ea36e0237e45db8581e45546b9a5474a701556f';
+
+
+    //token API de CLIENTYFY (Se reemplaza con cada cuenta)
+    const authToken = '9ea36e0237e45db8581e45546b9a5474a701556f'; //solo reemplazar lo que esta entre colimmas, no toquen las comillas, abajo dejo un ejemplo
+    //const authToken = 'TOKEN-AQUI';
+
+
 
     const config = {
         method: 'post',
@@ -235,7 +264,12 @@ const processCustomerWithoutOrder = async (customer) => {
     };
 
     const apiUrl = 'https://api.clientify.net/v1/contacts/';
-    const authToken = '9ea36e0237e45db8581e45546b9a5474a701556f';
+
+
+    //token API de CLIENTYFY (Se reemplaza con cada cuenta)
+    const authToken = '9ea36e0237e45db8581e45546b9a5474a701556f'; //solo reemplazar lo que esta entre colimmas, no toquen las comillas, abajo dejo un ejemplo
+    //const authToken = 'TOKEN-AQUI';
+
 
     const config = {
         method: 'post',
@@ -355,21 +389,10 @@ const runProcess = async () => {
 
 
 
-console.log(`Número total de peticiones a Clean Cloud: ${cleanCloudRequestsCount}`);
-// Función para mantener activa la instancia
-const keepInstanceActive = () => {
-    console.log('Manteniendo la instancia activa.');
-};
 
-// Configurar un intervalo para mantener activa la instancia cada 40 segundos
-const keepInstanceActiveInterval = 20 * 1000;
-
-setInterval(() => {
-    keepInstanceActive();
-}, keepInstanceActiveInterval);
 
 // Configurar un intervalo para actualizar los datos cada minuto (60,000 milisegundos)
-const updateInterval = 300* 60 * 1000; // Cada 30 minutos
+const updateInterval = 12 * 60 * 1000; // Cada 30 minutos
 
 setInterval(async () => {
     console.log('Antes de fetchCleanCloudData');
