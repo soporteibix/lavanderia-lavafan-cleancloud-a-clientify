@@ -1,8 +1,11 @@
 import axios from 'axios';
 
-//token Clean Cloud (se remplaza en cada cuenta nueva)
-const api_token = "1d1132d976e9b68ba0ae528596771783e91aa9c1"; //solo reemplazar lo que esta entre colimmas, no toquen las comillas, abajo dejo un ejemplo
-//const authToken = 'TOKEN-AQUI';
+// Define una lista de tokens
+const tokens = [
+    "1d1132d976e9b68ba0ae528596771783e91aa9c1",
+    "888d4a8c4dc28fdfd09c3612535e770fbcb5960a",
+    "4430ceceeee4ad477d5766f62f3c5af4b2ad9c5f"
+];
 
 // Función para obtener la fecha actual en formato "YYYY-MM-DD"
 const getCurrentDate = () => {
@@ -21,42 +24,34 @@ const fifteenDaysAgo = new Date();
 //El ultimo dato determina la cantidad de dias atras que va a buscar, en este caso 5
 fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 2);
 
-
-const customersOptions = {
+const customersOptions = token => ({
     method: 'post',
     url: 'https://cleancloudapp.com/api/getCustomer',
     headers: {
-        'Content-Type': 'application/json'
-        
+        'Content-Type': 'application/json'        
     },
-
     data: {
-        "api_token": api_token,
+        "api_token": token,
         "dateFrom": fifteenDaysAgo.toISOString().split('T')[0],  // Formatea la fecha a "YYYY-MM-DD"
         "dateTo": getCurrentDate(),
         excludeDeactivated: 0
     }
-};console.log('Script iniciado');
+});
 
-
-const ordersOptions = {
+const ordersOptions = token => ({
     method: 'post',
     url: 'https://cleancloudapp.com/api/getOrders',
     headers: {
         'Content-Type': 'application/json'
     },
     data: {
-        "api_token": api_token,
+        "api_token": token,
         "dateFrom": fifteenDaysAgo.toISOString().split('T')[0],
         "dateTo": getCurrentDate(),
         excludeDeactivated: 0,
         sendProductDetails: 1
-
     }
-};
-let cachedCustomersData = null;
-let cachedOrdersData = null;
-
+});
 
 // Función para procesar y mostrar la información de un pedido y cliente correspondiente
 const processCustomerOrder = (customer, order, product) => {
@@ -234,6 +229,9 @@ const continueWithOrders = async (customersData, ordersData) => {
 };
 
 
+//////******************************************** */
+
+
 // Nueva función para procesar clientes sin pedidos
 const processCustomerWithoutOrder = async (customer) => {
     console.log('Informacion cliente sin pedidos:');
@@ -265,11 +263,9 @@ const processCustomerWithoutOrder = async (customer) => {
 
     const apiUrl = 'https://api.clientify.net/v1/contacts/';
 
-
     //token API de CLIENTYFY (Se reemplaza con cada cuenta)
     const authToken = '9ea36e0237e45db8581e45546b9a5474a701556f'; //solo reemplazar lo que esta entre colimmas, no toquen las comillas, abajo dejo un ejemplo
     //const authToken = 'TOKEN-AQUI';
-
 
     const config = {
         method: 'post',
@@ -301,39 +297,37 @@ const processCustomerWithoutOrder = async (customer) => {
     });
 };
 
+
+
+
 let cleanCloudRequestsCount = 0;
 
-axios(customersOptions)
-    .then(response => {
+const fetchDataWithTokens = async () => {
+    for (const token of tokens) {
+        const customersResponse = await axios(customersOptions(token));
         cleanCloudRequestsCount++;
-        //console.log('API Response (Customers):', response.data);
+        //console.log('API Response (Customers):', customersResponse.data);
 
-        if (response.data && response.data.Customers && Array.isArray(response.data.Customers)) {
-            const customersData = response.data.Customers;
-            axios(ordersOptions)
-                .then(response => {
-                    cleanCloudRequestsCount++;
-                    //console.log('API Response (Orders):', response.data);
+        if (customersResponse.data && customersResponse.data.Customers && Array.isArray(customersResponse.data.Customers)) {
+            const customersData = customersResponse.data.Customers;
+            const ordersResponse = await axios(ordersOptions(token));
+            cleanCloudRequestsCount++;
+            //console.log('API Response (Orders):', ordersResponse.data);
 
-                    if (response.data && response.data.Orders && Array.isArray(response.data.Orders)) {
-                        const ordersData = response.data.Orders;
-                        continueWithOrders(customersData, ordersData);
-                    } else {
-                        console.error('Error: La respuesta de la API no contiene una propiedad Orders iterable.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error (Orders):', error);
-                });
+            if (ordersResponse.data && ordersResponse.data.Orders && Array.isArray(ordersResponse.data.Orders)) {
+                const ordersData = ordersResponse.data.Orders;
+                await continueWithOrders(customersData, ordersData);
+            } else {
+                console.error('Error: La respuesta de la API no contiene una propiedad Orders iterable.');
+            }
         } else {
             console.error('Error: La respuesta de la API no contiene una propiedad Customers iterable.');
         }
-    })
-    .catch(error => {
-        console.error('Error (Customers):', error);
-    });
+    }
+};
 
-
+// Llamar a la función principal
+fetchDataWithTokens();
 
 // Opciones del cliente para la solicitud inicial
 const initialRequestOptions = {
@@ -349,13 +343,13 @@ const fetchCleanCloudData = async () => {
         if (!cachedCustomersData || !cachedOrdersData) {
             const customersResponse = await axios({
                 ...initialRequestOptions,
-                ...customersOptions
+                ...customersOptions(tokens[0])
             });
             const customersData = customersResponse.data?.Customers || [];
 
             const ordersResponse = await axios({
                 ...initialRequestOptions,
-                ...ordersOptions
+                ...ordersOptions(tokens[0])
             });
             const ordersData = ordersResponse.data?.Orders || [];
 
@@ -368,9 +362,6 @@ const fetchCleanCloudData = async () => {
         console.error('Error al obtener datos de Clean Cloud:', error.message);
     }
 };
-
-
-
 
 const runProcess = async () => {
     try {
@@ -386,10 +377,6 @@ const runProcess = async () => {
         console.error('Error en el proceso:', error.message);
     }
 };
-
-
-
-
 
 // Configurar un intervalo para actualizar los datos cada minuto (60,000 milisegundos)
 const updateInterval = 12 * 60 * 1000; // Cada 30 minutos
