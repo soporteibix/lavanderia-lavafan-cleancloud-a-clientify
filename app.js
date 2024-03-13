@@ -20,8 +20,6 @@ const getCurrentDate = () => {
 const processedOrderIds = new Set();
 
 const fifteenDaysAgo = new Date();
-
-//El ultimo dato determina la cantidad de dias atras que va a buscar, en este caso 5
 fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 2);
 
 const customersOptions = token => ({
@@ -53,7 +51,6 @@ const ordersOptions = token => ({
     }
 });
 
-// Función para procesar y mostrar la información de un pedido y cliente correspondiente
 const processCustomerOrder = (customer, order, product) => {
 
     //Declaracion de variables:
@@ -215,12 +212,10 @@ const continueWithOrders = async (customersData, ordersData) => {
         const associatedOrders = ordersData.filter(order => order.customerID === customer.ID);
 
         if (associatedOrders.length > 0) {
-            // Si hay pedidos asociados, procesar la información
             for (const order of associatedOrders) {
                 await processCustomerOrder(customer, order);
             }
         } else {
-            // Si no hay pedidos asociados, procesar la información del cliente sin pedidos
             await processCustomerWithoutOrder(customer);
         }
     }
@@ -228,11 +223,6 @@ const continueWithOrders = async (customersData, ordersData) => {
     console.log('Proceso de comparación completado.');
 };
 
-
-//////******************************************** */
-
-
-// Nueva función para procesar clientes sin pedidos
 const processCustomerWithoutOrder = async (customer) => {
     console.log('Informacion cliente sin pedidos:');
     console.log('ID:', customer.ID);
@@ -295,71 +285,35 @@ const processCustomerWithoutOrder = async (customer) => {
                 });
         });
     });
+
 };
-
-
-
-
-let cleanCloudRequestsCount = 0;
 
 const fetchDataWithTokens = async () => {
     for (const token of tokens) {
         const customersResponse = await axios(customersOptions(token));
-        cleanCloudRequestsCount++;
-        //console.log('API Response (Customers):', customersResponse.data);
+        const ordersResponse = await axios(ordersOptions(token));
 
-        if (customersResponse.data && customersResponse.data.Customers && Array.isArray(customersResponse.data.Customers)) {
+        if (customersResponse.data && customersResponse.data.Customers && Array.isArray(customersResponse.data.Customers) &&
+            ordersResponse.data && ordersResponse.data.Orders && Array.isArray(ordersResponse.data.Orders)) {
             const customersData = customersResponse.data.Customers;
-            const ordersResponse = await axios(ordersOptions(token));
-            cleanCloudRequestsCount++;
-            //console.log('API Response (Orders):', ordersResponse.data);
-
-            if (ordersResponse.data && ordersResponse.data.Orders && Array.isArray(ordersResponse.data.Orders)) {
-                const ordersData = ordersResponse.data.Orders;
-                await continueWithOrders(customersData, ordersData);
-            } else {
-                console.error('Error: La respuesta de la API no contiene una propiedad Orders iterable.');
-            }
+            const ordersData = ordersResponse.data.Orders;
+            await continueWithOrders(customersData, ordersData);
         } else {
-            console.error('Error: La respuesta de la API no contiene una propiedad Customers iterable.');
+            console.error('Error: La respuesta de la API no contiene datos válidos.');
         }
-    }
-};
-
-// Llamar a la función principal
-fetchDataWithTokens();
-
-// Opciones del cliente para la solicitud inicial
-const initialRequestOptions = {
-    method: 'post',
-    headers: {
-        'Content-Type': 'application/json'
     }
 };
 
 const fetchCleanCloudData = async () => {
     try {
-        // Realizar la primera solicitud solo si los datos en caché aún no existen
-        if (!cachedCustomersData || !cachedOrdersData) {
-            const customersResponse = await axios({
-                ...initialRequestOptions,
-                ...customersOptions(tokens[0])
-            });
-            const customersData = customersResponse.data?.Customers || [];
-
-            const ordersResponse = await axios({
-                ...initialRequestOptions,
-                ...ordersOptions(tokens[0])
-            });
-            const ordersData = ordersResponse.data?.Orders || [];
-
-            cachedCustomersData = customersData;
-            cachedOrdersData = ordersData;
-
-            console.log('Datos de Clean Cloud actualizados.');
-        }
+        console.log('Actualizando datos de Clean Cloud...');
+        await fetchDataWithTokens();
+        console.log('Datos de Clean Cloud actualizados.');
+        console.log('Iniciando proceso...');
+        await runProcess();
+        console.log('Proceso completo.');
     } catch (error) {
-        console.error('Error al obtener datos de Clean Cloud:', error.message);
+        console.error('Error al actualizar datos de Clean Cloud:', error.message);
     }
 };
 
@@ -379,7 +333,7 @@ const runProcess = async () => {
 };
 
 // Configurar un intervalo para actualizar los datos cada minuto (60,000 milisegundos)
-const updateInterval = 12 * 60 * 1000; // Cada 30 minutos
+const updateInterval = 2 * 60 * 1000; // Cada 30 minutos
 
 setInterval(async () => {
     console.log('Antes de fetchCleanCloudData');
