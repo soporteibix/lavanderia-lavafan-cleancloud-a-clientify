@@ -333,7 +333,7 @@ const runProcess = async () => {
 };
 
 // Configurar un intervalo para actualizar los datos cada minuto (60,000 milisegundos)
-const updateInterval = 2 * 60 * 1000; // Cada 30 minutos
+const updateInterval = 12 * 60 * 1000; // Cada 30 minutos
 
 setInterval(async () => {
     console.log('Antes de fetchCleanCloudData');
